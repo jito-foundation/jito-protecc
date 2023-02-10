@@ -1,12 +1,13 @@
+pub mod sdk;
+
 use std::mem::size_of;
 use anchor_lang::prelude::*;
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
-/// NOTE: This program is meant to only be used in the context of bundles.
-/// The pre/post guard instructions should be separate transactions wrapping the inner contents of a bundle.
+/// The pre/post guard instructions should be separate transactions or instructions wrapping the inner contents of a bundle or transaction.
 #[program]
-pub mod bundle_guard {
+pub mod jito_protecc {
     use super::*;
 
     pub fn close_guard_state(_ctx: Context<CloseGuardState>) -> Result<()> {
