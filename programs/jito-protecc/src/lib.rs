@@ -1,6 +1,7 @@
 pub mod sdk;
 
 use std::mem::size_of;
+
 use anchor_lang::prelude::*;
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
@@ -10,7 +11,7 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 pub mod jito_protecc {
     use super::*;
 
-    pub fn close_guard_state(_ctx: Context<CloseGuardState>) -> Result<()> {
+    pub fn close_guarded_state(_ctx: Context<CloseGuardedState>) -> Result<()> {
         Ok(())
     }
 
@@ -27,9 +28,13 @@ pub mod jito_protecc {
             Err(Error::AnchorError(AnchorError {
                 error_name: "guard failure".to_string(),
                 error_code_number: 69,
-                error_msg: format!("negative balance change: pre lamports: {}, post lamports: {}", ctx.accounts.guarded_account.lamports(), ctx.accounts.guarded_state.lamports),
+                error_msg: format!(
+                    "negative balance change: pre lamports: {}, post lamports: {}",
+                    ctx.accounts.guarded_account.lamports(),
+                    ctx.accounts.guarded_state.lamports
+                ),
                 error_origin: None,
-                compared_values: None
+                compared_values: None,
             }))
         } else {
             Ok(())
@@ -38,7 +43,7 @@ pub mod jito_protecc {
 }
 
 #[derive(Accounts)]
-pub struct CloseGuardState<'info> {
+pub struct CloseGuardedState<'info> {
     /// CHECK: We just care about the account's lamports.
     pub guarded_account: AccountInfo<'info>,
 
