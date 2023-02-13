@@ -3,6 +3,7 @@ pub mod sdk;
 use std::mem::size_of;
 
 use anchor_lang::prelude::*;
+use anchor_spl::token::TokenAccount;
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
@@ -11,27 +12,56 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 pub mod jito_protecc {
     use super::*;
 
-    pub fn close_guarded_state(_ctx: Context<CloseGuardedState>) -> Result<()> {
+    pub fn close_sol_guarded_state(_ctx: Context<CloseSolGuardedState>) -> Result<()> {
         Ok(())
     }
 
-    pub fn pre_guard(ctx: Context<PreGuard>, bump: u8) -> Result<()> {
-        let guarded_state = &mut ctx.accounts.guarded_state;
-        guarded_state.lamports = ctx.accounts.guarded_account.lamports();
-        guarded_state.bump = bump;
+    pub fn pre_sol_guard(ctx: Context<PreSolGuard>, bump: u8) -> Result<()> {
+        let sol_guarded_state = &mut ctx.accounts.sol_guarded_state;
+        sol_guarded_state.pre_balance = ctx.accounts.guarded_account.lamports();
+        sol_guarded_state.bump = bump;
 
         Ok(())
     }
 
-    pub fn post_guard(ctx: Context<PostGuard>) -> Result<()> {
-        if ctx.accounts.guarded_account.lamports() < ctx.accounts.guarded_state.lamports {
+    pub fn post_sol_guard(ctx: Context<PostSolGuard>) -> Result<()> {
+        if ctx.accounts.guarded_account.lamports() < ctx.accounts.sol_guarded_state.pre_balance {
             Err(Error::AnchorError(AnchorError {
-                error_name: "guard failure".to_string(),
+                error_name: "sol guard failure".to_string(),
                 error_code_number: 69,
                 error_msg: format!(
-                    "negative balance change: pre lamports: {}, post lamports: {}",
+                    "negative balance change: pre_balance: {}, post_balance: {}",
+                    ctx.accounts.sol_guarded_state.pre_balance,
                     ctx.accounts.guarded_account.lamports(),
-                    ctx.accounts.guarded_state.lamports
+                ),
+                error_origin: None,
+                compared_values: None,
+            }))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn close_token_guarded_state(_ctx: Context<CloseTokenGuardedState>) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn pre_token_guard(ctx: Context<PreTokenGuard>, bump: u8) -> Result<()> {
+        let token_guarded_state = &mut ctx.accounts.token_guarded_state;
+        token_guarded_state.pre_balance = ctx.accounts.token_account.amount;
+        token_guarded_state.bump = bump;
+
+        Ok(())
+    }
+
+    pub fn post_token_guard(ctx: Context<PostTokenGuard>) -> Result<()> {
+        if ctx.accounts.token_account.amount < ctx.accounts.token_guarded_state.pre_balance {
+            Err(Error::AnchorError(AnchorError {
+                error_name: "spl_token_state guard failure".to_string(),
+                error_code_number: 69,
+                error_msg: format!(
+                    "negative balance change: pre_balance: {}, post_balance: {}",
+                    ctx.accounts.token_guarded_state.pre_balance, ctx.accounts.token_account.amount,
                 ),
                 error_origin: None,
                 compared_values: None,
@@ -43,7 +73,28 @@ pub mod jito_protecc {
 }
 
 #[derive(Accounts)]
-pub struct CloseGuardedState<'info> {
+pub struct CloseTokenGuardedState<'info> {
+    #[account(
+        mut,
+        seeds = [
+            GuardedState::SEED,
+            token_account.key().as_ref(),
+            signer.key().as_ref(),
+        ],
+        bump = token_guarded_state.bump,
+        close = signer
+    )]
+    pub token_guarded_state: Account<'info, GuardedState>,
+
+    pub token_account: Account<'info, TokenAccount>,
+
+    /// Anyone can crank this instruction.
+    #[account(mut)]
+    pub signer: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct CloseSolGuardedState<'info> {
     /// CHECK: We just care about the account's lamports.
     pub guarded_account: AccountInfo<'info>,
 
@@ -54,10 +105,10 @@ pub struct CloseGuardedState<'info> {
             guarded_account.key().as_ref(),
             signer.key().as_ref(),
         ],
-        bump = guarded_state.bump,
+        bump = sol_guarded_state.bump,
         close = signer
     )]
-    pub guarded_state: Account<'info, GuardedState>,
+    pub sol_guarded_state: Account<'info, GuardedState>,
 
     /// Anyone can crank this instruction.
     #[account(mut)]
@@ -65,7 +116,30 @@ pub struct CloseGuardedState<'info> {
 }
 
 #[derive(Accounts)]
-pub struct PreGuard<'info> {
+pub struct PreTokenGuard<'info> {
+    #[account(
+        init_if_needed,
+        seeds = [
+            GuardedState::SEED,
+            token_account.key().as_ref(),
+            signer.key().as_ref(),
+        ],
+        bump,
+        space = GuardedState::SIZE,
+        payer = signer
+    )]
+    pub token_guarded_state: Account<'info, GuardedState>,
+
+    pub token_account: Account<'info, TokenAccount>,
+
+    #[account(mut)]
+    pub signer: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct PreSolGuard<'info> {
     /// CHECK: We just care about the account's lamports.
     pub guarded_account: AccountInfo<'info>,
 
@@ -80,7 +154,7 @@ pub struct PreGuard<'info> {
         space = GuardedState::SIZE,
         payer = signer
     )]
-    pub guarded_state: Account<'info, GuardedState>,
+    pub sol_guarded_state: Account<'info, GuardedState>,
 
     #[account(mut)]
     pub signer: Signer<'info>,
@@ -89,7 +163,27 @@ pub struct PreGuard<'info> {
 }
 
 #[derive(Accounts)]
-pub struct PostGuard<'info> {
+pub struct PostTokenGuard<'info> {
+    #[account(
+        mut,
+        seeds = [
+            GuardedState::SEED,
+            token_account.key().as_ref(),
+            signer.key().as_ref(),
+        ],
+        bump = token_guarded_state.bump,
+        close = signer
+    )]
+    pub token_guarded_state: Account<'info, GuardedState>,
+
+    pub token_account: Account<'info, TokenAccount>,
+
+    #[account(mut)]
+    pub signer: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct PostSolGuard<'info> {
     /// CHECK: We just care about the account's lamports.
     pub guarded_account: AccountInfo<'info>,
 
@@ -100,10 +194,10 @@ pub struct PostGuard<'info> {
             guarded_account.key().as_ref(),
             signer.key().as_ref(),
         ],
-        bump = guarded_state.bump,
+        bump = sol_guarded_state.bump,
         close = signer
     )]
-    pub guarded_state: Account<'info, GuardedState>,
+    pub sol_guarded_state: Account<'info, GuardedState>,
 
     #[account(mut)]
     pub signer: Signer<'info>,
@@ -112,7 +206,7 @@ pub struct PostGuard<'info> {
 #[account]
 #[derive(Default)]
 pub struct GuardedState {
-    pub lamports: u64,
+    pub pre_balance: u64,
     pub bump: u8,
 }
 
