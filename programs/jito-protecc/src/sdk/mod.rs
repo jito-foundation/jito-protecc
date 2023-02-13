@@ -1,29 +1,23 @@
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction, InstructionData};
 
-pub struct PreGuardArgs {
-    pub should_guard_lamports: bool,
+pub struct PreTokenGuardArgs {
     pub bump: u8,
 }
-pub struct PreGuardAccounts {
-    pub guarded_account: Pubkey,
-    pub guarded_state: Pubkey,
+pub struct PreTokenGuardAccounts {
+    pub token_guarded_state: Pubkey,
     pub signer: Pubkey,
     pub system_program: Pubkey,
     pub token_account: Pubkey,
 }
-pub fn pre_guard_ix(
+pub fn pre_token_guard_ix(
     program_id: Pubkey,
-    args: PreGuardArgs,
-    accounts: PreGuardAccounts,
+    args: PreTokenGuardArgs,
+    accounts: PreTokenGuardAccounts,
 ) -> Instruction {
-    let PreGuardArgs {
-        should_guard_lamports,
-        bump,
-    } = args;
+    let PreTokenGuardArgs { bump } = args;
 
-    let PreGuardAccounts {
-        guarded_account,
-        guarded_state,
+    let PreTokenGuardAccounts {
+        token_guarded_state,
         signer,
         system_program,
         token_account,
@@ -31,14 +25,9 @@ pub fn pre_guard_ix(
 
     Instruction {
         program_id,
-        data: crate::instruction::PreGuard {
-            should_guard_lamports,
-            bump,
-        }
-        .data(),
-        accounts: crate::accounts::PreGuard {
-            guarded_account,
-            guarded_state,
+        data: crate::instruction::PreTokenGuard { bump }.data(),
+        accounts: crate::accounts::PreTokenGuard {
+            token_guarded_state,
             signer,
             system_program,
             token_account,
@@ -47,21 +36,19 @@ pub fn pre_guard_ix(
     }
 }
 
-pub struct PostGuardArgs;
-pub struct PostGuardAccounts {
-    pub guarded_account: Pubkey,
-    pub guarded_state: Pubkey,
+pub struct PostTokenGuardArgs;
+pub struct PostTokenGuardAccounts {
+    pub token_guarded_state: Pubkey,
     pub signer: Pubkey,
     pub token_account: Pubkey,
 }
-pub fn post_guard_ix(
+pub fn post_token_guard_ix(
     program_id: Pubkey,
-    _args: PostGuardArgs,
-    accounts: PostGuardAccounts,
+    _args: PostTokenGuardArgs,
+    accounts: PostTokenGuardAccounts,
 ) -> Instruction {
-    let PostGuardAccounts {
-        guarded_account,
-        guarded_state,
+    let PostTokenGuardAccounts {
+        token_guarded_state,
         signer,
         token_account,
     } = accounts;
@@ -69,9 +56,8 @@ pub fn post_guard_ix(
     Instruction {
         program_id,
         data: vec![],
-        accounts: crate::accounts::PostGuard {
-            guarded_account,
-            guarded_state,
+        accounts: crate::accounts::PostTokenGuard {
+            token_guarded_state,
             signer,
             token_account,
         }
@@ -79,21 +65,19 @@ pub fn post_guard_ix(
     }
 }
 
-pub struct CloseGuardedStateArgs;
-pub struct CloseGuardedStateAccounts {
-    pub guarded_account: Pubkey,
-    pub guarded_state: Pubkey,
+pub struct CloseTokenGuardedStateArgs;
+pub struct CloseTokenGuardedStateAccounts {
+    pub token_guarded_state: Pubkey,
     pub signer: Pubkey,
     pub token_account: Pubkey,
 }
-pub fn close_guarded_state_ix(
+pub fn close_token_guarded_state_ix(
     program_id: Pubkey,
-    _args: CloseGuardedStateArgs,
-    accounts: CloseGuardedStateAccounts,
+    _args: CloseTokenGuardedStateArgs,
+    accounts: CloseTokenGuardedStateAccounts,
 ) -> Instruction {
-    let CloseGuardedStateAccounts {
-        guarded_account,
-        guarded_state,
+    let CloseTokenGuardedStateAccounts {
+        token_guarded_state,
         signer,
         token_account,
     } = accounts;
@@ -101,9 +85,8 @@ pub fn close_guarded_state_ix(
     Instruction {
         program_id,
         data: vec![],
-        accounts: crate::accounts::CloseGuardedState {
-            guarded_account,
-            guarded_state,
+        accounts: crate::accounts::CloseTokenGuardedState {
+            token_guarded_state,
             signer,
             token_account,
         }
